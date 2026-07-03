@@ -513,12 +513,6 @@
         }
         
         .lesson-menu-item.completed {
-            opacity: 0.7;
-        }
-        
-        .lesson-menu-item.completed::after {
-            content: "✓";
-            float: right;
             color: var(--success);
         }
         
@@ -2660,10 +2654,24 @@
         }
 
 
+        function getPreviousButton() {
+            const currentIndex = state.currentDomain.lessons.findIndex(l => l.id === state.currentLesson.id);
+
+            if (currentIndex > 0) {
+                return `<button class="btn btn-secondary" onclick="showLesson(courseData.modules[${state.currentDomain.id - 1}].lessons[${currentIndex - 1}])">
+                    ← Previous Lesson
+                </button>`;
+            } else {
+                return `<button class="btn btn-secondary" onclick="backToDashboard()">
+                    ← Back to Dashboard
+                </button>`;
+            }
+        }
+
         function getNavigationButton(lesson) {
-            const currentIndex = state.currentDomain.lessons.findIndex(l => l.id === lesson.id);
+            const currentIndex = state.currentDomain.lessons.findIndex(l => l.id === state.currentLesson.id);
             const isLastLesson = currentIndex === state.currentDomain.lessons.length - 1;
-            
+
             if (isLastLesson) {
                 return `<button class="btn btn-success" onclick="startDomainQuiz()">
                     Take Module ${state.currentDomain.id} Quiz →
@@ -2722,9 +2730,7 @@
                         </button>
                     </div>` : ''}
                     <div class="nav-buttons">
-                        <button class="btn btn-secondary" onclick="backToDashboard()">
-                            ← Back to Dashboard
-                        </button>
+                        ${getPreviousButton()}
                         ${getNavigationButton()}
                     </div>
                 </div>
@@ -2743,10 +2749,10 @@
                 const isActive = state.currentLesson && state.currentLesson.id === lesson.id;
                 const isCompleted = state.progress.completedLessons.includes(lesson.id);
                 const lessonNum = lesson.id.replace('lesson-', '');
-                
-                return `<div class="lesson-menu-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}" 
+
+                return `<div class="lesson-menu-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}"
                     onclick="showLesson(courseData.modules[${state.currentModule.id - 1}].lessons.find(l => l.id === '${lesson.id}'))">
-                    ${lessonNum}
+                    ${isCompleted ? '✓' : ''}${lessonNum}. ${lesson.title}
                 </div>`;
             }).join('');
         }
