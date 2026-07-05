@@ -135,6 +135,18 @@
             box-shadow: 0 6px 30px rgba(37, 99, 235, 0.5);
         }
 
+        .btn-primary:disabled {
+            background: var(--gray-300);
+            color: var(--gray-500);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-primary:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
         /* Dashboard */
         .dashboard {
             display: none;
@@ -555,6 +567,25 @@
             border-radius: 50%;
         }
 
+        .lesson-menu-item.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .lesson-menu-item.locked .lesson-menu-check {
+            background: var(--gray-200);
+            color: var(--gray-400);
+        }
+
+        .lesson-menu-item.locked .lesson-menu-check::after {
+            content: '🔒';
+            font-size: 10px;
+            position: absolute;
+            margin-left: 12px;
+            margin-top: -8px;
+        }
+
         .lesson-menu-check {
             flex-shrink: 0;
             width: 24px;
@@ -566,6 +597,7 @@
             color: var(--gray-500);
             background: var(--gray-100);
             border-radius: 50%;
+            position: relative;
         }
 
         .lesson-menu-label {
@@ -2223,7 +2255,19 @@
 
             courseData.modules.forEach((module, index) => {
                 const card = document.createElement('div');
+
+                // Check if module is locked (previous module not completed)
+                let isModuleLocked = false;
+                if (index > 0) {
+                    const prevModule = courseData.modules[index - 1];
+                    const prevModuleCompleted = prevModule.lessons.every(l =>
+                        state.progress.completedLessons.includes(l.id)
+                    );
+                    isModuleLocked = !prevModuleCompleted;
+                }
+
                 card.className = 'module-card';
+                if (isModuleLocked) card.className += ' locked';
 
                 // Calculate progress
                 const totalLessons = module.lessons.length;
@@ -2247,12 +2291,14 @@
                             <div class="progress-fill" style="width: ${progress}%"></div>
                         </div>
                     </div>
-                    <button class="btn btn-primary" style="margin-top: 20px; width: 100%;">
-                        ${completedLessons === 0 ? 'Start Module' : 'Continue Learning'}
+                    <button class="btn btn-primary" style="margin-top: 20px; width: 100%;" ${isModuleLocked ? 'disabled' : ''}>
+                        ${isModuleLocked ? 'Complete Previous Module' : (completedLessons === 0 ? 'Start Module' : 'Continue Learning')}
                     </button>
                 `;
 
-                card.querySelector('button').onclick = () => showModuleLessons(module);
+                if (!isModuleLocked) {
+                    card.querySelector('button').onclick = () => showModuleLessons(module);
+                }
                 grid.appendChild(card);
             });
 
@@ -2300,14 +2346,21 @@
                 const isActive = state.currentLesson && state.currentLesson.id === lesson.id;
                 const isCompleted = state.progress.completedLessons.includes(lesson.id);
 
+                // Check if this lesson is locked (previous lesson not completed)
+                const isLocked = index > 0 && !state.progress.completedLessons.includes(module.lessons[index - 1].id);
+
                 let classes = 'lesson-menu-item';
                 if (isActive) classes += ' active';
                 if (isCompleted) classes += ' completed';
+                if (isLocked) classes += ' locked';
 
                 const checkmark = isCompleted ? '&#10003;' : `${index + 1}`;
 
+                // Only make clickable if not locked
+                const onclick = isLocked ? '' : `onclick="showLesson(courseData.modules[${module.id - 1}].lessons[${index}])"`;
+
                 menuItems += `
-                    <div class="${classes}" onclick="showLesson(courseData.modules[${module.id - 1}].lessons[${index}])">
+                    <div class="${classes}" ${onclick}>
                         <span class="lesson-menu-check">${checkmark}</span>
                         <span class="lesson-menu-label">${index + 1}. ${lesson.title}</span>
                     </div>
