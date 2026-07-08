@@ -703,9 +703,12 @@
                 <!-- Modules will be inserted here -->
             </div>
 
-            <div style="text-align: center; margin-top: 40px;">
+            <div style="text-align: center; margin-top: 40px; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
                 <button class="btn btn-primary" onclick="showMockExam()" id="mockExamBtn" style="display: none;">
-                    Take Full Mock Exam (90 Questions)
+                    📝 Academy Mock Exam (100 Questions)
+                </button>
+                <button class="btn btn-success" onclick="showOfficialExam()" id="officialExamBtn" style="display: none;">
+                    ⭐ Official IAPP Practice Exam
                 </button>
             </div>
         </div>
@@ -726,6 +729,11 @@
                 Time Remaining: 2:30:00
             </div>
             <!-- Exam content will be inserted here -->
+        </div>
+
+        <!-- Official IAPP Practice Exam -->
+        <div id="officialExam" class="official-exam" style="display: none;">
+            <!-- Official exam tracker will be inserted here -->
         </div>
     </div>
 
@@ -4676,7 +4684,23 @@
                               "back": "ML technique where models train on decentralized data without sharing raw data centrally, preserving privacy.",
                               "module": 2
                     }
-          ]
+          ],
+          "officialExam": {
+                    "title": "Official IAPP Practice Exam",
+                    "description": "Track your performance on the official IAPP AIGP Practice Exam v2.0 (100 questions, 180 minutes)",
+                    "totalQuestions": 100,
+                    "timeLimit": 10800000,
+                    "passingScore": 70,
+                    "instructions": [
+                              "This is a reference to the official IAPP Practice Exam you purchased separately",
+                              "Use the printed answer sheet and PDF provided by IAPP",
+                              "Set a 180-minute timer and complete all 100 questions",
+                              "After completing the exam, enter your score below to track your progress",
+                              "Review the official rationales for questions you missed",
+                              "Use this academy to review relevant lessons for weak areas"
+                    ],
+                    "scoreHistory": []
+          }
 };
 
         // State Management
@@ -5110,13 +5134,226 @@
         }
 
         function showMockExam() {
-            alert('Full 90-question mock exam coming soon! Complete more modules to unlock.');
+            alert('Full mock exam coming soon! Complete more modules to unlock.');
+        }
+
+        function showOfficialExam() {
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('lessonView').style.display = 'none';
+            document.getElementById('mockExam').style.display = 'none';
+            document.getElementById('officialExam').style.display = 'block';
+            renderOfficialExam();
+        }
+
+        function renderOfficialExam() {
+            const container = document.getElementById('officialExam');
+            const exam = courseData.officialExam;
+            const scoreHistory = loadOfficialExamProgress();
+
+            const bestScore = scoreHistory.length > 0 ? Math.max(...scoreHistory.map(s => s.score)) : null;
+            const avgScore = scoreHistory.length > 0 ?
+                Math.round(scoreHistory.reduce((sum, s) => sum + s.score, 0) / scoreHistory.length) : null;
+
+            container.innerHTML = `
+                <div style="max-width: 900px; margin: 0 auto; padding: 40px 20px;">
+                    <button onclick="returnToDashboard()" style="margin-bottom: 20px; padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                        ← Back to Dashboard
+                    </button>
+
+                    <div style="background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <div style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50px; margin-bottom: 20px;">
+                                <span style="color: white; font-weight: bold; font-size: 0.9em;">⭐ OFFICIAL IAPP EXAM ⭐</span>
+                            </div>
+                            <h1 style="font-size: 2em; margin: 20px 0 10px 0; color: #1f2937;">${exam.title}</h1>
+                            <p style="color: #6b7280; font-size: 1.1em;">${exam.description}</p>
+                        </div>
+
+                        ${scoreHistory.length > 0 ? `
+                        <div style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; padding: 20px; margin-bottom: 30px;">
+                            <h3 style="margin: 0 0 15px 0; color: #166534;">📊 Your Performance</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                                <div>
+                                    <div style="font-size: 0.9em; color: #6b7280;">Attempts</div>
+                                    <div style="font-size: 1.8em; font-weight: bold; color: #166534;">${scoreHistory.length}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.9em; color: #6b7280;">Best Score</div>
+                                    <div style="font-size: 1.8em; font-weight: bold; color: #166534;">${bestScore}%</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.9em; color: #6b7280;">Average</div>
+                                    <div style="font-size: 1.8em; font-weight: bold; color: #166534;">${avgScore}%</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.9em; color: #6b7280;">Pass Status</div>
+                                    <div style="font-size: 1.8em; font-weight: bold; color: ${bestScore >= exam.passingScore ? '#166534' : '#991b1b'};">
+                                        ${bestScore >= exam.passingScore ? '✓ PASSING' : '✗ NOT YET'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+                            <h3 style="margin: 0 0 15px 0; color: #1e40af;">📋 Instructions</h3>
+                            <ol style="margin: 0; padding-left: 20px; color: #1f2937; line-height: 1.8;">
+                                ${exam.instructions.map(instruction => `<li>${instruction}</li>`).join('')}
+                            </ol>
+                        </div>
+
+                        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+                            <h3 style="margin: 0 0 10px 0; color: #92400e;">⏱️ Exam Details</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; color: #1f2937;">
+                                <div>
+                                    <strong>Questions:</strong> ${exam.totalQuestions}
+                                </div>
+                                <div>
+                                    <strong>Time Limit:</strong> ${exam.timeLimit / (60 * 1000)} minutes
+                                </div>
+                                <div>
+                                    <strong>Passing Score:</strong> ${exam.passingScore}%
+                                </div>
+                                <div>
+                                    <strong>Format:</strong> Multiple Choice
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="background: #f9fafb; padding: 30px; border-radius: 12px; margin-bottom: 30px;">
+                            <h3 style="margin: 0 0 20px 0; color: #1f2937;">📝 Record Your Score</h3>
+                            <p style="color: #6b7280; margin-bottom: 20px;">After completing the official IAPP practice exam, enter your score below to track your progress.</p>
+
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: end;">
+                                <div style="flex: 1; min-width: 200px;">
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+                                        Number of Correct Answers
+                                    </label>
+                                    <input type="number" id="officialExamScore" min="0" max="${exam.totalQuestions}"
+                                           placeholder="0-${exam.totalQuestions}"
+                                           style="width: 100%; padding: 12px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 1em;">
+                                </div>
+                                <div style="flex: 1; min-width: 200px;">
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">
+                                        Date Taken (optional)
+                                    </label>
+                                    <input type="date" id="officialExamDate"
+                                           style="width: 100%; padding: 12px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 1em;">
+                                </div>
+                                <button onclick="saveOfficialExamScore()"
+                                        style="padding: 12px 30px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer; white-space: nowrap;">
+                                    💾 Save Score
+                                </button>
+                            </div>
+                        </div>
+
+                        ${scoreHistory.length > 0 ? `
+                        <div style="margin-top: 30px;">
+                            <h3 style="margin: 0 0 15px 0; color: #1f2937;">📈 Score History</h3>
+                            <div style="overflow-x: auto;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="background: #f3f4f6;">
+                                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #d1d5db;">Attempt</th>
+                                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #d1d5db;">Date</th>
+                                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #d1d5db;">Score</th>
+                                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #d1d5db;">Percentage</th>
+                                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #d1d5db;">Result</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${scoreHistory.map((record, idx) => `
+                                            <tr style="border-bottom: 1px solid #e5e7eb;">
+                                                <td style="padding: 12px;">#${idx + 1}</td>
+                                                <td style="padding: 12px;">${record.date}</td>
+                                                <td style="padding: 12px; font-weight: 600;">${record.score}/${exam.totalQuestions}</td>
+                                                <td style="padding: 12px; font-weight: 600;">${record.percentage}%</td>
+                                                <td style="padding: 12px;">
+                                                    <span style="padding: 4px 12px; border-radius: 12px; font-size: 0.85em; font-weight: 600;
+                                                                 background: ${record.percentage >= exam.passingScore ? '#d1fae5' : '#fee2e2'};
+                                                                 color: ${record.percentage >= exam.passingScore ? '#065f46' : '#991b1b'};">
+                                                        ${record.percentage >= exam.passingScore ? '✓ Pass' : '✗ Not Pass'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <div style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; padding: 20px; margin-top: 30px;">
+                            <h4 style="margin: 0 0 10px 0; color: #991b1b;">⚠️ Important Note</h4>
+                            <p style="margin: 0; color: #7f1d1d; line-height: 1.6;">
+                                The official IAPP Practice Exam is copyrighted material and must be purchased separately from IAPP.
+                                This tracker helps you monitor your performance. Use this academy to review lessons related to questions you missed.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveOfficialExamScore() {
+            const scoreInput = document.getElementById('officialExamScore');
+            const dateInput = document.getElementById('officialExamDate');
+            const score = parseInt(scoreInput.value);
+            const exam = courseData.officialExam;
+
+            if (isNaN(score) || score < 0 || score > exam.totalQuestions) {
+                alert(`Please enter a valid score between 0 and ${exam.totalQuestions}`);
+                return;
+            }
+
+            const percentage = Math.round((score / exam.totalQuestions) * 100);
+            const dateStr = dateInput.value || new Date().toISOString().split('T')[0];
+
+            const record = {
+                score: score,
+                percentage: percentage,
+                date: dateStr,
+                timestamp: Date.now()
+            };
+
+            const history = loadOfficialExamProgress();
+            history.push(record);
+            localStorage.setItem('aigpOfficialExamHistory', JSON.stringify(history));
+
+            scoreInput.value = '';
+            dateInput.value = '';
+
+            renderOfficialExam();
+
+            alert(`Score saved! You got ${score}/${exam.totalQuestions} (${percentage}%). ${percentage >= exam.passingScore ? '🎉 Passing score!' : 'Keep studying and try again!'}`);
+        }
+
+        function loadOfficialExamProgress() {
+            const saved = localStorage.getItem('aigpOfficialExamHistory');
+            return saved ? JSON.parse(saved) : [];
+        }
+
+        function returnToDashboard() {
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('lessonView').style.display = 'none';
+            document.getElementById('mockExam').style.display = 'none';
+            document.getElementById('officialExam').style.display = 'none';
         }
 
         // Initialize on load - auto-resume if progress exists
         if (localStorage.getItem('aigpProgress')) {
             startTraining();
         }
+
+        // Show exam buttons when page loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const mockBtn = document.getElementById('mockExamBtn');
+                const officialBtn = document.getElementById('officialExamBtn');
+                if (mockBtn) mockBtn.style.display = 'inline-block';
+                if (officialBtn) officialBtn.style.display = 'inline-block';
+            }, 500);
+        });
 
     </script>
 </body>
