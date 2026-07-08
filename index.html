@@ -4793,6 +4793,49 @@
                 grid.appendChild(card);
             });
 
+            // Add Official IAPP Practice Exam Tile
+            const officialExamHistory = loadOfficialExamProgress();
+            const bestScore = officialExamHistory.length > 0 ?
+                Math.max(...officialExamHistory.map(s => s.score)) : null;
+            const attempts = officialExamHistory.length;
+
+            const examCard = document.createElement('div');
+            examCard.className = 'module-card';
+            examCard.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            examCard.style.color = 'white';
+            examCard.style.border = '3px solid #fbbf24';
+            examCard.style.boxShadow = '0 8px 16px rgba(251, 191, 36, 0.3)';
+
+            examCard.innerHTML = `
+                <div style="position: absolute; top: 10px; right: 10px; font-size: 2em;">⭐</div>
+                <div class="module-number" style="background: rgba(255,255,255,0.3); color: white;">IAPP</div>
+                <div class="module-title" style="color: white; font-size: 1.3em;">Official IAPP Practice Exam</div>
+                <p style="color: rgba(255,255,255,0.95); margin-top: 10px; font-size: 0.95em;">
+                    100 Questions | 180 Minutes | Official IAPP v2.0
+                </p>
+                ${attempts > 0 ? `
+                    <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-size: 0.9em;">Attempts: ${attempts}</span>
+                            <span style="font-size: 0.9em;">Best: ${bestScore}%</span>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.3); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div style="width: ${bestScore}%; height: 100%; background: ${bestScore >= 70 ? '#10b981' : '#f59e0b'}; border-radius: 4px;"></div>
+                        </div>
+                    </div>
+                ` : `
+                    <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center;">
+                        <span style="font-size: 0.95em;">📋 Not attempted yet</span>
+                    </div>
+                `}
+                <button class="btn btn-primary" style="margin-top: 20px; width: 100%; background: white; color: #667eea; border: none; font-weight: 600;">
+                    ${attempts > 0 ? 'View Scores & Track Progress' : 'Track Your Score'}
+                </button>
+            `;
+
+            examCard.querySelector('button').onclick = () => showOfficialExam();
+            grid.appendChild(examCard);
+
             updateStats();
         }
 
@@ -5134,7 +5177,326 @@
         }
 
         function showMockExam() {
-            alert('Full mock exam coming soon! Complete more modules to unlock.');
+            if (!courseData.mockExam || !courseData.mockExam.questions || courseData.mockExam.questions.length === 0) {
+                alert('Mock exam content is being loaded. Please refresh the page.');
+                return;
+            }
+
+            // Hide other views
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('lessonView').style.display = 'none';
+            document.getElementById('officialExam').style.display = 'none';
+            document.getElementById('mockExam').style.display = 'block';
+
+            // Initialize exam state
+            window.mockExamState = {
+                questions: shuffleArray([...courseData.mockExam.questions]),
+                currentIndex: 0,
+                answers: new Array(courseData.mockExam.questions.length).fill(null),
+                flagged: new Array(courseData.mockExam.questions.length).fill(false),
+                timeRemaining: courseData.mockExam.settings.timeLimit,
+                startTime: Date.now()
+            };
+
+            // Start timer
+            startMockExamTimer();
+
+            // Render exam interface
+            renderMockExamInterface();
+        }
+
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function startMockExamTimer() {
+            if (window.mockExamTimer) clearInterval(window.mockExamTimer);
+
+            window.mockExamTimer = setInterval(() => {
+                window.mockExamState.timeRemaining -= 1000;
+
+                if (window.mockExamState.timeRemaining <= 0) {
+                    clearInterval(window.mockExamTimer);
+                    alert('Time is up! Submitting your exam...');
+                    submitMockExam();
+                    return;
+                }
+
+                updateMockExamTimer();
+            }, 1000);
+        }
+
+        function updateMockExamTimer() {
+            const minutes = Math.floor(window.mockExamState.timeRemaining / 60000);
+            const seconds = Math.floor((window.mockExamState.timeRemaining % 60000) / 1000);
+            const timerEl = document.getElementById('examTimer');
+            if (timerEl) {
+                timerEl.textContent = `Time Remaining: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        function renderMockExamInterface() {
+            const container = document.getElementById('mockExam');
+            const state = window.mockExamState;
+
+            container.innerHTML = `
+                <div style="max-width: 1200px; margin: 0 auto; padding: 20px;">
+                    <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div>
+                            <h2 style="margin: 0; color: #1f2937;">Academy Mock Exam</h2>
+                            <p style="margin: 5px 0 0 0; color: #6b7280;">100 Questions | 90 Minutes</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div id="examTimer" style="font-size: 1.5em; font-weight: bold; color: #dc2626; margin-bottom: 10px;">Time Remaining: 90:00</div>
+                            <button onclick="submitMockExam()" style="padding: 10px 24px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                                Submit Exam
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 300px; gap: 20px;">
+                        <div id="mockExamQuestion" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <!-- Question content -->
+                        </div>
+                        <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); height: fit-content;">
+                            <div id="mockExamNavigator">
+                                <!-- Navigator -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            updateMockExamTimer();
+            renderMockExamQuestion(0);
+            renderMockExamNavigator();
+        }
+
+        function renderMockExamQuestion(index) {
+            const state = window.mockExamState;
+            const question = state.questions[index];
+            const container = document.getElementById('mockExamQuestion');
+
+            state.currentIndex = index;
+
+            container.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0;">Question ${index + 1} of ${state.questions.length}</h3>
+                    <button onclick="toggleMockExamFlag(${index})" style="padding: 8px 16px; background: ${state.flagged[index] ? '#f59e0b' : '#e5e7eb'}; color: ${state.flagged[index] ? 'white' : '#374151'}; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        ${state.flagged[index] ? '🚩 Flagged' : '🏳️ Flag'}
+                    </button>
+                </div>
+
+                <div style="font-size: 1.1em; line-height: 1.6; margin-bottom: 25px; color: #1f2937;">
+                    ${question.question}
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    ${question.options.map((option, i) => `
+                        <label style="padding: 16px; border: 2px solid ${state.answers[index] === i ? '#6366f1' : '#e5e7eb'}; background: ${state.answers[index] === i ? '#eff6ff' : 'white'}; border-radius: 8px; cursor: pointer; display: flex; align-items: center; transition: all 0.2s;">
+                            <input type="radio" name="mockQ${index}" value="${i}" ${state.answers[index] === i ? 'checked' : ''} onchange="selectMockExamAnswer(${index}, ${i})" style="margin-right: 12px; width: 20px; height: 20px; cursor: pointer;">
+                            <span style="flex: 1;">${option}</span>
+                        </label>
+                    `).join('')}
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+                    <button onclick="renderMockExamQuestion(${index - 1})" ${index === 0 ? 'disabled' : ''} style="padding: 12px 24px; background: ${index === 0 ? '#e5e7eb' : '#6366f1'}; color: ${index === 0 ? '#9ca3af' : 'white'}; border: none; border-radius: 8px; font-weight: 600; cursor: ${index === 0 ? 'not-allowed' : 'pointer'};">
+                        ← Previous
+                    </button>
+                    <button onclick="renderMockExamQuestion(${index + 1})" ${index === state.questions.length - 1 ? 'disabled' : ''} style="padding: 12px 24px; background: ${index === state.questions.length - 1 ? '#e5e7eb' : '#6366f1'}; color: ${index === state.questions.length - 1 ? '#9ca3af' : 'white'}; border: none; border-radius: 8px; font-weight: 600; cursor: ${index === state.questions.length - 1 ? 'not-allowed' : 'pointer'};">
+                        Next →
+                    </button>
+                </div>
+            `;
+        }
+
+        function selectMockExamAnswer(questionIndex, optionIndex) {
+            window.mockExamState.answers[questionIndex] = optionIndex;
+            renderMockExamNavigator();
+        }
+
+        function toggleMockExamFlag(index) {
+            window.mockExamState.flagged[index] = !window.mockExamState.flagged[index];
+            renderMockExamQuestion(index);
+            renderMockExamNavigator();
+        }
+
+        function renderMockExamNavigator() {
+            const state = window.mockExamState;
+            const container = document.getElementById('mockExamNavigator');
+            const answered = state.answers.filter(a => a !== null).length;
+            const flagged = state.flagged.filter(f => f).length;
+
+            container.innerHTML = `
+                <h4 style="margin: 0 0 15px 0;">Progress</h4>
+                <div style="margin-bottom: 15px; padding: 12px; background: #f3f4f6; border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>Answered:</span>
+                        <strong>${answered}/${state.questions.length}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Flagged:</span>
+                        <strong style="color: #f59e0b;">${flagged}</strong>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; max-height: 400px; overflow-y: auto;">
+                    ${state.questions.map((q, i) => `
+                        <button onclick="renderMockExamQuestion(${i})" style="padding: 8px; border: 2px solid ${state.currentIndex === i ? '#6366f1' : '#e5e7eb'}; background: ${state.answers[i] !== null ? '#10b981' : state.flagged[i] ? '#fef3c7' : 'white'}; color: ${state.answers[i] !== null ? 'white' : '#1f2937'}; border-radius: 6px; cursor: pointer; font-weight: ${state.currentIndex === i ? 'bold' : 'normal'}; font-size: 0.9em;">
+                            ${i + 1}
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function submitMockExam() {
+            const state = window.mockExamState;
+            const unanswered = state.answers.filter(a => a === null).length;
+
+            if (unanswered > 0) {
+                if (!confirm(`You have ${unanswered} unanswered questions. Submit anyway?`)) {
+                    return;
+                }
+            }
+
+            clearInterval(window.mockExamTimer);
+
+            // Calculate score
+            let correct = 0;
+            state.questions.forEach((q, i) => {
+                if (state.answers[i] === q.correct) {
+                    correct++;
+                }
+            });
+
+            const percentage = Math.round((correct / state.questions.length) * 100);
+            const passed = percentage >= 70;
+
+            showMockExamResults(correct, percentage, passed);
+        }
+
+        function showMockExamResults(score, percentage, passed) {
+            const container = document.getElementById('mockExam');
+            const state = window.mockExamState;
+
+            container.innerHTML = `
+                <div style="max-width: 900px; margin: 0 auto; padding: 40px;">
+                    <div style="background: white; padding: 50px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
+                        <div style="font-size: 3em; margin-bottom: 20px;">
+                            ${passed ? '🎉' : '📚'}
+                        </div>
+                        <h1 style="margin: 0 0 10px 0; color: ${passed ? '#10b981' : '#f59e0b'};">
+                            ${passed ? 'Congratulations!' : 'Keep Studying!'}
+                        </h1>
+                        <div style="font-size: 3em; font-weight: bold; color: #1f2937; margin: 30px 0;">
+                            ${score}/${state.questions.length}
+                        </div>
+                        <div style="font-size: 2em; font-weight: 600; color: ${passed ? '#10b981' : '#f59e0b'}; margin-bottom: 20px;">
+                            ${percentage}%
+                        </div>
+                        <div style="padding: 15px; background: ${passed ? '#d1fae5' : '#fef3c7'}; color: ${passed ? '#065f46' : '#92400e'}; border-radius: 8px; font-size: 1.2em; font-weight: 600; margin-bottom: 30px;">
+                            ${passed ? '✓ PASSED' : '✗ NOT PASSED'} (70% required)
+                        </div>
+
+                        <div style="text-align: left; margin-bottom: 30px; padding: 20px; background: #f9fafb; border-radius: 8px;">
+                            <h3 style="margin: 0 0 15px 0;">Performance by Module</h3>
+                            ${getModuleBreakdown()}
+                        </div>
+
+                        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                            <button onclick="reviewMockExam()" style="padding: 15px 30px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 600; cursor: pointer;">
+                                Review Answers
+                            </button>
+                            <button onclick="returnToDashboard()" style="padding: 15px 30px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 600; cursor: pointer;">
+                                Back to Dashboard
+                            </button>
+                            <button onclick="showMockExam()" style="padding: 15px 30px; background: #f59e0b; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 600; cursor: pointer;">
+                                Retake Exam
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getModuleBreakdown() {
+            const state = window.mockExamState;
+            const byModule = {};
+
+            state.questions.forEach((q, i) => {
+                if (!byModule[q.module]) {
+                    byModule[q.module] = { total: 0, correct: 0 };
+                }
+                byModule[q.module].total++;
+                if (state.answers[i] === q.correct) {
+                    byModule[q.module].correct++;
+                }
+            });
+
+            return Object.entries(byModule).sort((a, b) => parseInt(a[0]) - parseInt(b[0])).map(([mod, stats]) => {
+                const pct = Math.round((stats.correct / stats.total) * 100);
+                return `
+                    <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+                        <span style="font-weight: 600;">Module ${mod}</span>
+                        <span>${stats.correct}/${stats.total} (${pct}%)</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function reviewMockExam() {
+            const container = document.getElementById('mockExam');
+            const state = window.mockExamState;
+
+            container.innerHTML = `
+                <div style="max-width: 1000px; margin: 0 auto; padding: 40px;">
+                    <div style="background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                            <h2 style="margin: 0;">Exam Review</h2>
+                            <button onclick="returnToDashboard()" style="padding: 12px 24px; background: #6366f1; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                                Back to Dashboard
+                            </button>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 25px;">
+                            ${state.questions.map((q, i) => {
+                                const userAnswer = state.answers[i];
+                                const isCorrect = userAnswer === q.correct;
+                                return `
+                                    <div style="padding: 20px; border: 2px solid ${isCorrect ? '#10b981' : '#ef4444'}; border-radius: 12px; background: ${isCorrect ? '#f0fdf4' : '#fef2f2'};">
+                                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                                            <h4 style="margin: 0;">Question ${i + 1}</h4>
+                                            <span style="padding: 6px 12px; background: ${isCorrect ? '#10b981' : '#ef4444'}; color: white; border-radius: 6px; font-weight: 600; font-size: 0.9em;">
+                                                ${isCorrect ? '✓ Correct' : '✗ Incorrect'}
+                                            </span>
+                                        </div>
+                                        <p style="margin: 0 0 15px 0; font-weight: 500;">${q.question}</p>
+                                        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
+                                            ${q.options.map((opt, oi) => `
+                                                <div style="padding: 12px; border-radius: 6px; background: ${oi === q.correct ? '#d1fae5' : oi === userAnswer && !isCorrect ? '#fee2e2' : '#f9fafb'}; border: 2px solid ${oi === q.correct ? '#10b981' : oi === userAnswer && !isCorrect ? '#ef4444' : '#e5e7eb'};">
+                                                    ${oi === q.correct ? '✓ ' : oi === userAnswer && !isCorrect ? '✗ ' : ''}${opt}
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                        ${q.explanation ? `
+                                            <div style="padding: 15px; background: white; border-left: 4px solid #6366f1; border-radius: 4px;">
+                                                <strong>Explanation:</strong> ${q.explanation}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         function showOfficialExam() {
